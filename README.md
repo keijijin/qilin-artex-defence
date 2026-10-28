@@ -158,6 +158,7 @@ flowchart LR
 |---|---|---|---|
 | `defence-ledger` | StatefulSet（1台、PV） | 事象の受け取り、連鎖台帳、方針評価、取り消しの実行、案件、発生源の途絶検出 | 強制用アプリ。資格情報とロール割り当ての取り消し |
 | `defence-collector` | Deployment | Entra 監査ログの取り込みと事象への変換 | 収集用アプリ。監査ログの読み取りだけ |
+| `defence_client`（[`client/`](client/)） | Python ライブラリ | アプリから事象を送り、判定を受け取る。再送、台帳の障害時の fail-open/closed、生存通知 | なし |
 
 ### 3.2 方針
 
@@ -233,7 +234,7 @@ oc apply -k deploy/overlays/openshift
 kubectl apply -k deploy/overlays/kubernetes
 ```
 
-5. 端末やバックアップの転送元の名前空間にラベル `defence.example/event-source=true` を付け、その ServiceAccount を `ALLOWED_CALLERS` に足す
+5. 端末やバックアップの転送元の名前空間にラベル `defence.example/event-source=true` を付け、その ServiceAccount を `ALLOWED_CALLERS` に足す。アプリへの組み込みは [docs/integration.md](docs/integration.md)
 6. 検証テナントで E2E を通した後に、`policy.yaml` の `enforcement.mode` を `enforce` にする
 
 ### API
@@ -261,6 +262,14 @@ cd service && uv venv --python 3.12 .venv && uv pip install --python .venv -e '.
 結果: 78件すべて合格。分岐を含む網羅率 98%（2026-10-28）。
 
 構想の失敗パターン F1〜F12（入口）と G5、G6、G10、G11、G15、G16（侵入後）を、判定として一つずつ確かめる。並行に同じ事象が届いても案件が重複しないこと、取り込みを重ねても取り消しが一回だけであることも含む。
+
+クライアント（`client/`）は、台帳の環境に入れて同じように動かす。台帳の本物と組み合わせた試験（P1 での拒否、障害中に溜めた事象を送り直しても一件として扱われること）も含む。
+
+```bash
+uv pip install --python service/.venv -e client && cd client && ../service/.venv/bin/python -m pytest -q
+```
+
+結果: 30件すべて合格。分岐を含む網羅率 98%（2026-10-28）。
 
 ### 5.2 E2E（OpenShift）
 
