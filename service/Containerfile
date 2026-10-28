@@ -1,0 +1,15 @@
+# OpenShift の任意 UID で動くよう、UBI の Python イメージを使う。本番ではダイジェストで固定する
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/python-312:latest
+FROM ${BASE_IMAGE}
+
+USER 0
+COPY pyproject.toml /opt/app-root/src/
+COPY src /opt/app-root/src/src
+RUN pip install --no-cache-dir /opt/app-root/src && \
+    rm -rf /opt/app-root/src/src && \
+    chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
+USER 1001
+
+ENV PYTHONUNBUFFERED=1
+EXPOSE 8443
+ENTRYPOINT ["defence-ledger"]

@@ -1,0 +1,25 @@
+# OpenShift。TLS は service-ca が発行し、CA は ConfigMap に注入される。
+# 名前空間の UID 範囲で動くよう、runAsUser は指定しない（restricted-v2 SCC で動く）。
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - service-ca.yaml
+patches:
+  - target: {kind: Service, name: defence-ledger}
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          service.beta.openshift.io/serving-cert-secret-name: defence-ledger-tls
+  - target: {kind: Deployment, name: defence-collector}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/volumes/2
+        value:
+          name: ledger-ca
+          configMap:
+            name: defence-service-ca
+            items:
+              - {key: service-ca.crt, path: ca.crt}
+  # OpenShift の監視（openshift-monitoring）や Ingress から台帳へは入れない。追加の流入元は名前空間ラベルで登録する

@@ -1,0 +1,43 @@
+# 方針の閾値と台帳データ。値はすべて初期仮説（※要確認）。
+# 事案の指標（IP、User-Agent）は期限付きで書き、コードの定数にしない。
+windows:
+  decoy_to_auth_minutes: 30
+  chain_block_minutes: 60
+  spray_window_minutes: 5
+  spray_distinct_accounts: 10
+  lockout_ratio_suppress: 0.5
+  lateral_window_minutes: 10
+  lateral_distinct_hosts: 3
+  chain_block_extend_minutes: 120
+  source_silence_minutes: 15
+  source_grace_hours: 72
+
+registrations:
+  # 外部事業者を含む application の登録範囲（P8、A2）。照合は application ID で行う
+  applications: []
+  #  - application_id: 00000000-0000-0000-0000-000000000000
+  #    service_principal_id: 00000000-0000-0000-0000-000000000000
+  #    scopes: [Mail.Read]
+  #    resources: []
+  crawler_ips: []
+  diagnostic_windows: []
+  secret_readers: []
+  # I5b。ここに書いた発生源から事象が途絶えると案件を開く
+  sources:
+    - name: entra-audit
+      registered_at: "2026-10-28T00:00:00+00:00"
+
+indicators:
+  ips: []
+  #  - value: 144.172.64.99
+  #    expires: "2026-11-30T00:00:00+00:00"
+  #    reference: Microsoft Security Blog 2026-10-21
+  user_agents: []
+
+enforcement:
+  # dry-run では判定と提案だけを記録する。enforce への切り替えは検証環境での実証の後に行う
+  mode: dry-run
+  automatic_kinds:
+    - remove_sp_credential
+    - remove_role_assignment
+  host_webhook_url: null

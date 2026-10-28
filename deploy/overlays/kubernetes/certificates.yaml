@@ -1,0 +1,47 @@
+# 名前空間内だけで使う CA を作り、台帳のサーバー証明書を発行する。
+# 発行される Secret には tls.crt、tls.key、ca.crt が入る。収集は ca.crt で台帳を検証する。
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: defence-selfsigned
+  namespace: defence-system
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: defence-ca
+  namespace: defence-system
+spec:
+  isCA: true
+  commonName: defence-ca
+  secretName: defence-ca
+  duration: 8760h
+  privateKey: {algorithm: ECDSA, size: 256}
+  issuerRef: {name: defence-selfsigned, kind: Issuer}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: defence-ca
+  namespace: defence-system
+spec:
+  ca:
+    secretName: defence-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: defence-ledger
+  namespace: defence-system
+spec:
+  secretName: defence-ledger-tls
+  duration: 2160h
+  renewBefore: 360h
+  dnsNames:
+    - defence-ledger
+    - defence-ledger.defence-system.svc
+    - defence-ledger.defence-system.svc.cluster.local
+  privateKey: {algorithm: ECDSA, size: 256}
+  issuerRef: {name: defence-ca, kind: Issuer}

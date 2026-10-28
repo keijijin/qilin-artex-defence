@@ -1,0 +1,29 @@
+# 台帳と収集は、Entra 側でも別の application として登録する。
+# 収集は監査ログの読み取りだけ、台帳（強制点）は資格情報とロール割り当ての取り消しを持つ。
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: defence-ledger
+  namespace: defence-system
+automountServiceAccountToken: true  # TokenReview の呼び出しに使う
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: defence-collector
+  namespace: defence-system
+automountServiceAccountToken: false
+---
+# 呼び出し元の token を TokenReview で検証するための権限
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: defence-ledger-auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: defence-ledger
+    namespace: defence-system

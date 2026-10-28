@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: defence-collector
+  namespace: defence-system
+  labels:
+    app.kubernetes.io/name: defence-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: defence-collector
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: defence-collector
+    spec:
+      serviceAccountName: defence-collector
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: collector
+          image: defence-ledger:latest
+          command: ["defence-collector"]
+          env:
+            - name: LEDGER_URL
+              value: https://defence-ledger.defence-system.svc:8443
+            - name: LEDGER_CA_FILE
+              value: /etc/defence/ledger-ca/ca.crt
+            - name: LEDGER_TOKEN_FILE
+              value: /var/run/secrets/defence/token
+            - name: POLL_SECONDS
+              value: "60"
+            - name: LOOKBACK_MINUTES
+              value: "15"
+            # 収集の Entra application。権限は監査ログの読み取りだけ
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                configMapKeyRef: {name: defence-entra, key: tenant_id}
+            - name: AZURE_CLIENT_ID
+              valueFrom:
+                configMapKeyRef: {name: defence-entra, key: collector_client_id}
+            - name: AZURE_FEDERATED_TOKEN_FILE
+              value: /var/run/secrets/azure/tokens/azure-identity-token
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: {cpu: 50m, memory: 96Mi}
+            limits: {memory: 256Mi}
+          volumeMounts:
+            - {name: tokens, mountPath: /var/run/secrets/defence, readOnly: true}
+            - {name: azure-token, mountPath: /var/run/secrets/azure/tokens, readOnly: true}
+            - {name: ledger-ca, mountPath: /etc/defence/ledger-ca, readOnly: true}
+      volumes:
+        - name: tokens
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  audience: defence-ledger
+                  expirationSeconds: 3600
+        - name: azure-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: azure-identity-token
+                  audience: api://AzureADTokenExchange
+                  expirationSeconds: 3600
+        - name: ledger-ca
+          secret:
+            secretName: defence-ledger-tls
+            items:
+              - {key: ca.crt, path: ca.crt}

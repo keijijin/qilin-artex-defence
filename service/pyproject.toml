@@ -1,0 +1,30 @@
+[project]
+name = "defence-ledger"
+version = "0.1.0"
+description = "連鎖台帳と方針評価（idea/admission-control.md, idea/defense-system.md の実装）"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi==0.115.6",
+  "uvicorn==0.32.1",
+  "httpx==0.28.1",
+  "pydantic==2.10.4",
+  "pyyaml==6.0.2",
+]
+
+[project.optional-dependencies]
+test = ["pytest==8.3.4"]
+
+[project.scripts]
+defence-ledger = "defence.main:run_ledger"
+defence-collector = "defence.main:run_collector"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,68 @@
+# 既定は全拒否。台帳への流入は収集と、ラベルで登録した発生源の名前空間だけ。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: defence-system
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ledger-ingress
+  namespace: defence-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: defence-ledger
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: defence-collector
+        - namespaceSelector:
+            matchLabels:
+              defence.example/event-source: "true"
+      ports:
+        - {protocol: TCP, port: 8443}
+  # kubelet のプローブがこの方針で止まる CNI では、ノードの CIDR を ipBlock で足す ※要確認
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-dns-https
+  namespace: defence-system
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+        - {protocol: UDP, port: 5353}
+        - {protocol: TCP, port: 5353}
+    # Entra、Graph、Kubernetes API（TokenReview）。宛先の絞り込みは OpenShift では EgressFirewall で行う
+    - ports:
+        - {protocol: TCP, port: 443}
+        - {protocol: TCP, port: 6443}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: collector-to-ledger
+  namespace: defence-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: defence-collector
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: defence-ledger
+      ports:
+        - {protocol: TCP, port: 8443}

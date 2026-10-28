@@ -1,0 +1,18 @@
+# 任意の追加。OVN-Kubernetes の EgressFirewall で、外向きを Entra と Graph に限る。
+# Kubernetes API（TokenReview）と端末側の webhook の宛先は環境ごとに足す ※要確認。
+# EgressFirewall は名前空間に一つだけで、名前は default でなければならない。
+apiVersion: k8s.ovn.org/v1
+kind: EgressFirewall
+metadata:
+  name: default
+  namespace: defence-system
+spec:
+  egress:
+    - type: Allow
+      to: {dnsName: login.microsoftonline.com}
+    - type: Allow
+      to: {dnsName: graph.microsoft.com}
+    # - type: Allow
+    #   to: {cidrSelector: 172.30.0.1/32}  # API サーバーの Service IP の例
+    - type: Deny
+      to: {cidrSelector: 0.0.0.0/0}
